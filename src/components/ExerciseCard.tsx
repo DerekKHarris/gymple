@@ -3,6 +3,7 @@ import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MUSCLE_LABELS, getExercise } from '@/data/exercises';
+import { openVideo } from '@/data/videos';
 import { formatReps } from '@/lib/periodization';
 import { exerciseHistory } from '@/lib/program';
 import type { Suggestion, SuggestionKind } from '@/lib/progression';
@@ -169,6 +170,9 @@ function ExerciseCardInner({
             </Text>
           </View>
         </View>
+        <Pressable onPress={() => openVideo(exercise)} hitSlop={8} accessibilityLabel={`Watch how to do ${exercise.name}`} style={styles.iconBtn}>
+          <Ionicons name="play" size={16} color={colors.accent} />
+        </Pressable>
         {exercise.cue ? (
           <Pressable onPress={() => setShowCue(!showCue)} hitSlop={8} accessibilityLabel="Form tip" style={styles.iconBtn}>
             <Ionicons name="information" size={18} color={colors.text} />
