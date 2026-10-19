@@ -62,6 +62,13 @@ Black and neon-yellow look inspired by the Ladder app: heavy uppercase Archivo B
 yellow pill buttons, a full-screen rest timer with the next set's weight, and a workout-complete
 screen with stats. Tokens live in `src/theme.ts`; shared components in `src/components/ui.tsx`.
 
+## Credits
+
+Exercise data by [RepDB](https://repdb.co): the exercise illustrations in `assets/exercises/` and the
+instructions and tips in `src/data/exerciseMedia.ts` come from the
+[RepDB free tier](https://github.com/RepDB/exercise-dataset) and may only be used inside this app
+(see `assets/exercises/LICENSE.md`). How-to videos link out to YouTube (`docs/EXERCISE_VIDEOS.md`).
+
 ## Tech
 
 Expo SDK 58, Expo Router, Zustand with AsyncStorage persistence, expo-linear-gradient,

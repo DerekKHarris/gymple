@@ -1,6 +1,7 @@
 import { EXERCISES, canPerform, getExercise } from '@/data/exercises';
 import { EQUIPMENT_PRESETS } from '@/data/goals';
 import { PLANS } from '@/data/plans';
+import { EXERCISE_MEDIA, thumbnailFor } from '@/data/exerciseMedia';
 import { EXERCISE_VIDEOS, videoSearchUrl, videoUrlFor } from '@/data/videos';
 import { TOTAL_WEEKS, schemeFor, weekInfo } from '@/lib/periodization';
 import { buildSession, createProgram, currentWeek, exerciseHistory, recommendPlans, resolvePlanDays, sessionId } from '@/lib/program';
@@ -155,5 +156,18 @@ describe('exercise videos', () => {
 
   it('falls back to a YouTube search', () => {
     expect(videoSearchUrl(getExercise('back_squat'))).toBe('https://www.youtube.com/results?search_query=Barbell%20Back%20Squat%20proper%20form');
+  });
+});
+
+describe('exercise illustrations', () => {
+  it('only covers real exercises and every entry has an image and instructions', () => {
+    const ids = new Set(EXERCISES.map((e) => e.id));
+    const entries = Object.entries(EXERCISE_MEDIA);
+    expect(entries.length).toBeGreaterThanOrEqual(80);
+    for (const [id, media] of entries) {
+      expect(ids.has(id)).toBe(true);
+      expect(thumbnailFor(id)).toBeDefined();
+      expect(media!.instructions.length).toBeGreaterThan(0);
+    }
   });
 });

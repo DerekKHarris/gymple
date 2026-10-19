@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EQUIPMENT_LABELS, EXERCISES, MUSCLE_LABELS, PATTERN_LABELS, canPerform } from '@/data/exercises';
 import type { Equipment, Exercise, Muscle, Pattern } from '@/lib/types';
 import { colors, radius, space } from '@/theme';
+import { ExerciseIcon } from './ExerciseIcon';
 import { Badge, Button, Chip, text } from './ui';
 
 const MUSCLES = Object.keys(MUSCLE_LABELS) as Muscle[];
@@ -84,6 +85,7 @@ export function ExercisePicker({
                 onPress={() => onPick(item)}
                 style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.cardAlt }]}
               >
+                <ExerciseIcon exercise={item} size={48} />
                 <View style={{ flex: 1 }}>
                   <Text style={text.h3}>{item.name}</Text>
                   <Text style={text.small}>

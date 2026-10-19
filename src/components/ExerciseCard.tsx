@@ -11,6 +11,7 @@ import { suggestionsForExercise } from '@/lib/suggest';
 import type { Profile, Session, SessionExercise, SetEntry } from '@/lib/types';
 import { useStore } from '@/store/useStore';
 import { colors, fonts, radius, space } from '@/theme';
+import { ExerciseDetail } from './ExerciseDetail';
 import { ExerciseIcon } from './ExerciseIcon';
 import { Badge, text } from './ui';
 
@@ -117,7 +118,7 @@ function ExerciseCardInner({
   const exercise = getExercise(se.exerciseId);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const [showCue, setShowCue] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
   const history = useMemo(() => exerciseHistory(sessions, se.exerciseId, session.id), [sessions, se.exerciseId, session.id]);
   const suggestions = useMemo(() => suggestionsForExercise(profile, sessions, session, index, history), [profile, sessions, session, index, history]);
@@ -154,9 +155,11 @@ function ExerciseCardInner({
   return (
     <View style={[styles.card, allDone && styles.cardDone]}>
       <View style={styles.header}>
-        <ExerciseIcon exercise={exercise} />
+        <Pressable onPress={() => setShowDetail(true)} accessibilityLabel={`How to do ${exercise.name}`}>
+          <ExerciseIcon exercise={exercise} />
+        </Pressable>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.title}>
+          <Text style={styles.title} onPress={() => setShowDetail(true)}>
             <Text style={{ color: colors.accent }}>{se.sets.length}x </Text>
             {exercise.name}
           </Text>
@@ -173,16 +176,14 @@ function ExerciseCardInner({
         <Pressable onPress={() => openVideo(exercise)} hitSlop={8} accessibilityLabel={`Watch how to do ${exercise.name}`} style={styles.iconBtn}>
           <Ionicons name="play" size={16} color={colors.accent} />
         </Pressable>
-        {exercise.cue ? (
-          <Pressable onPress={() => setShowCue(!showCue)} hitSlop={8} accessibilityLabel="Form tip" style={styles.iconBtn}>
-            <Ionicons name="information" size={18} color={colors.text} />
-          </Pressable>
-        ) : null}
+        <Pressable onPress={() => setShowDetail(true)} hitSlop={8} accessibilityLabel={`${exercise.name} instructions`} style={styles.iconBtn}>
+          <Ionicons name="information" size={18} color={colors.text} />
+        </Pressable>
         <Pressable onPress={() => onMenu(se)} hitSlop={8} accessibilityLabel={`${exercise.name} options`} style={styles.iconBtn}>
           <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
         </Pressable>
       </View>
-      {showCue && exercise.cue ? <Text style={[text.small, styles.cue]}>{exercise.cue}</Text> : null}
+      <ExerciseDetail exercise={exercise} visible={showDetail} onClose={() => setShowDetail(false)} />
       {last ? (
         <Text style={styles.last} numberOfLines={1}>
           LAST TIME <Text style={{ color: colors.text }}>{last.sets.map((s) => (s.weight ? `${num(s.weight)}×${s.reps}` : `${s.reps}${exercise.timed ? 's' : ''}`)).join('  ')}</Text>
@@ -232,7 +233,6 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 2 },
   counter: { color: colors.muted, fontSize: 12, fontWeight: '800' },
   iconBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.cardAlt, alignItems: 'center', justifyContent: 'center' },
-  cue: { color: colors.text, backgroundColor: colors.cardAlt, padding: space.sm, borderRadius: radius.sm },
   last: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   suggestion: {
     flexDirection: 'row',

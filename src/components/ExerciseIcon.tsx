@@ -1,7 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
+import { thumbnailFor } from '@/data/exerciseMedia';
 import type { Exercise } from '@/lib/types';
 import { colors, radius } from '@/theme';
 
@@ -27,8 +28,16 @@ function iconFor(exercise: Exercise): IconName {
   }
 }
 
-/** Thumbnail tile standing in for an exercise photo. */
+/** Thumbnail tile: the exercise illustration when there is one, otherwise an icon. */
 export function ExerciseIcon({ exercise, size = 52 }: { exercise: Exercise; size?: number }) {
+  const image = thumbnailFor(exercise.id);
+  if (image) {
+    return (
+      <View style={[styles.tile, styles.imageTile, { width: size, height: size }]}>
+        <Image source={image} style={styles.image} resizeMode="cover" accessibilityIgnoresInvertColors />
+      </View>
+    );
+  }
   return (
     <LinearGradient colors={['#2A2A30', '#141416']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.tile, { width: size, height: size }]}>
       <MaterialCommunityIcons name={iconFor(exercise)} size={size * 0.5} color={colors.accent} />
@@ -37,5 +46,7 @@ export function ExerciseIcon({ exercise, size = 52 }: { exercise: Exercise; size
 }
 
 const styles = StyleSheet.create({
-  tile: { borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: colors.accent },
+  tile: { borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: colors.accent, overflow: 'hidden' },
+  imageTile: { backgroundColor: '#DAF1FD' },
+  image: { width: '100%', height: '100%' },
 });

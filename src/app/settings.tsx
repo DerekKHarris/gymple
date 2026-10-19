@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChoiceSheet } from '@/components/Sheet';
@@ -79,6 +79,14 @@ export default function SettingsScreen() {
           <Text style={text.h3}>{program?.name ?? 'No plan selected'}</Text>
           <Button title="Change plan" variant="secondary" onPress={() => router.push('/plans')} />
         </Card>
+
+        <SectionTitle>Credits</SectionTitle>
+        <Pressable onPress={() => Linking.openURL('https://repdb.co').catch(() => {})} accessibilityRole="link">
+          <Text style={text.body}>
+            Exercise data by <Text style={{ color: colors.accent }}>RepDB (repdb.co)</Text>
+          </Text>
+        </Pressable>
+        <Text style={text.small}>Exercise illustrations, instructions and tips come from RepDB. How-to videos open on YouTube.</Text>
 
         <SectionTitle>Data</SectionTitle>
         <Text style={text.small}>Everything is stored only on this device.</Text>
