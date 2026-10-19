@@ -51,3 +51,5 @@ export const EQUIPMENT_PRESETS: { id: string; title: string; description: string
 ];
 
 export const GOAL_TITLES: Record<Goal, string> = Object.fromEntries(GOALS.map((g) => [g.value, g.title])) as Record<Goal, string>;
+
+export const LEVEL_TITLES: Record<Experience, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };

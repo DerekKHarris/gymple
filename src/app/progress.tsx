@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ExerciseIcon } from '@/components/ExerciseIcon';
 import { Card, SectionTitle, text } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
 import { exerciseHistory } from '@/lib/program';
 import { estimateOneRepMax, type ExerciseLog } from '@/lib/progression';
 import { useStore } from '@/store/useStore';
-import { colors, radius, space } from '@/theme';
+import { colors, fonts, radius, space } from '@/theme';
 
 interface ExerciseStats {
   id: string;
@@ -111,6 +112,7 @@ export default function ProgressScreen() {
           return (
             <Card key={s.id} onPress={() => setOpen(expanded ? null : s.id)} style={{ gap: space.sm }}>
               <View style={styles.row}>
+                <ExerciseIcon exercise={getExercise(s.id)} size={44} />
                 <View style={{ flex: 1 }}>
                   <Text style={text.h3}>{s.name}</Text>
                   <Text style={text.small}>
@@ -152,12 +154,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: space.lg, gap: space.md, paddingBottom: space.xl * 2 },
   tiles: { flexDirection: 'row', gap: space.sm },
-  tile: { flex: 1, backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.md, alignItems: 'center' },
-  tileNum: { color: colors.accent, fontSize: 24, fontWeight: '800' },
+  tile: { flex: 1, backgroundColor: colors.card, borderRadius: radius.lg, padding: space.md, gap: 2 },
+  tileNum: { color: colors.accent, fontSize: 24, fontFamily: fonts.display },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  change: { fontWeight: '800', fontSize: 16 },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 48 },
-  bar: { flex: 1, backgroundColor: colors.border, borderRadius: 3 },
+  change: { fontFamily: fonts.display, fontSize: 16 },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 56 },
+  bar: { flex: 1, backgroundColor: '#3A3A40', borderRadius: 4 },
   barLast: { backgroundColor: colors.accent },
   history: { gap: 6, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: space.sm },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },

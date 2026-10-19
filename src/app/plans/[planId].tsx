@@ -1,16 +1,20 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ExerciseIcon } from '@/components/ExerciseIcon';
+import { PlanLettering } from '@/components/PlanLettering';
 import { ChoiceSheet } from '@/components/Sheet';
-import { Badge, Button, Card, SectionTitle, text } from '@/components/ui';
+import { Button, Display, SectionTitle, SegmentBar, Stat, text } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
+import { LEVEL_TITLES } from '@/data/goals';
 import { getPlan } from '@/data/plans';
 import { formatReps, schemeFor, weekInfo } from '@/lib/periodization';
 import { resolvePlanDays, schemeForExercise, sessionStatus } from '@/lib/program';
 import { useStore } from '@/store/useStore';
-import { colors, space } from '@/theme';
+import { colors, radius, space } from '@/theme';
 
 export default function PlanDetail() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
@@ -33,54 +37,75 @@ export default function PlanDetail() {
   };
 
   const blocks = [1, 5, 9].map((w) => ({ info: weekInfo(profile.goal, w), main: schemeFor(profile.goal, w, 'main'), acc: schemeFor(profile.goal, w, 'accessory') }));
+  const level = plan.levels.includes(profile.experience) ? LEVEL_TITLES[profile.experience] : LEVEL_TITLES[plan.levels[0]];
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
-      <Stack.Screen options={{ title: plan.name }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={text.h1}>{plan.name}</Text>
-        <View style={styles.meta}>
-          <Badge label={`${plan.daysPerWeek} days / week`} tone="info" />
-          <Badge label={plan.schedule} />
-        </View>
-        <Text style={text.body}>{plan.description}</Text>
-        <Card style={{ gap: space.xs }}>
-          <Text style={text.h3}>Why it works</Text>
-          <Text style={text.muted}>{plan.basis}</Text>
-        </Card>
+        <LinearGradient colors={['#2B2E0A', '#101010']} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.hero}>
+          <PlanLettering plan={plan} size={40} />
+          <Text style={[text.h2, { marginTop: space.md }]}>{plan.name}</Text>
+          <Text style={text.muted}>{plan.tagline}</Text>
+        </LinearGradient>
 
-        <SectionTitle>Your 12 weeks</SectionTitle>
+        <View style={styles.stats}>
+          <Stat value="12" label="Weeks" accent />
+          <View style={styles.divider} />
+          <Stat value={String(plan.daysPerWeek)} label="Days / week" accent />
+          <View style={styles.divider} />
+          <Stat value={level} label="Level" accent size={level.length > 8 ? 15 : 22} />
+        </View>
+
+        <Text style={text.body}>{plan.description}</Text>
+        <Text style={[text.small, { color: colors.muted }]}>Schedule: {plan.schedule}</Text>
+
+        <SectionTitle>Why it works</SectionTitle>
+        <Text style={text.muted}>{plan.basis}</Text>
+
+        <SectionTitle right="12 wks">Your 12 weeks</SectionTitle>
         {blocks.map(({ info, main, acc }, i) => (
           <View key={info.block} style={styles.block}>
-            <Text style={styles.blockWeeks}>Weeks {i * 4 + 1}–{i * 4 + 4}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={text.h3}>{info.phase}</Text>
-              <Text style={text.small}>{info.summary}</Text>
-              <Text style={[text.small, { color: colors.text }]}>
-                Main lifts {main.sets}×{formatReps(main)} · Accessories {acc.sets}×{formatReps(acc)} · Week {i * 4 + 4}: {weekInfo(profile.goal, i * 4 + 4).phase.toLowerCase()}
+            <View style={styles.blockHead}>
+              <Display size={18}>{info.phase}</Display>
+              <Text style={styles.blockWeeks}>
+                WK {i * 4 + 1}–{i * 4 + 4}
               </Text>
             </View>
+            <SegmentBar total={4} filled={3} />
+            <Text style={text.small}>{info.summary}</Text>
+            <Text style={[text.small, { color: colors.text }]}>
+              Main lifts <Text style={text.accent}>{main.sets}×{formatReps(main)}</Text> · Accessories{' '}
+              <Text style={text.accent}>
+                {acc.sets}×{formatReps(acc)}
+              </Text>{' '}
+              · Week {i * 4 + 4} is a {weekInfo(profile.goal, i * 4 + 4).phase.toLowerCase()} week
+            </Text>
           </View>
         ))}
 
-        <SectionTitle>Week 1 with your equipment</SectionTitle>
+        <Text style={[text.small, { marginTop: space.lg }]}>WEEK 1 WITH YOUR EQUIPMENT</Text>
         {days.map((day, i) => (
-          <Card key={i} style={{ gap: space.sm }}>
-            <Text style={text.h3}>{day.name}</Text>
-            <Text style={text.small}>{day.focus}</Text>
+          <View key={i}>
+            <SectionTitle right={`${day.exercises.length} exercises`}>{day.name}</SectionTitle>
             {day.exercises.map((ex) => {
               const exercise = getExercise(ex.exerciseId);
               const scheme = schemeForExercise(profile.goal, 1, ex.role, exercise);
               return (
                 <View key={ex.slotId} style={styles.exRow}>
-                  <Text style={[text.body, { flex: 1 }]}>{exercise.name}</Text>
-                  <Text style={text.muted}>
-                    {scheme.sets} × {formatReps(scheme, exercise.timed)}
-                  </Text>
+                  <ExerciseIcon exercise={exercise} size={44} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.exName} numberOfLines={1}>
+                      <Text style={{ color: colors.accent }}>{scheme.sets}x </Text>
+                      {exercise.name}
+                    </Text>
+                    <Text style={text.small}>
+                      {formatReps(scheme, exercise.timed)} {exercise.timed ? 'sec' : 'reps'}
+                    </Text>
+                  </View>
                 </View>
               );
             })}
-          </Card>
+          </View>
         ))}
       </ScrollView>
       <View style={styles.footer}>
@@ -100,9 +125,13 @@ export default function PlanDetail() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: space.lg, gap: space.md, paddingBottom: space.xl * 2 },
-  meta: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
-  block: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
-  blockWeeks: { color: colors.accent, fontWeight: '800', width: 84, fontSize: 13, paddingTop: 2 },
-  exRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: 4, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  footer: { padding: space.lg, borderTopWidth: 1, borderColor: colors.border },
+  hero: { borderRadius: radius.lg, padding: space.xl, gap: 2 },
+  stats: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
+  block: { gap: space.sm, paddingVertical: space.sm },
+  blockHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  blockWeeks: { color: colors.accent, fontWeight: '800', fontSize: 13 },
+  exRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  exName: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  footer: { paddingHorizontal: space.lg, paddingVertical: space.md },
 });

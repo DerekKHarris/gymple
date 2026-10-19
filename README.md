@@ -56,6 +56,13 @@ src/
 __tests__/             Jest tests
 ```
 
+## Design
+
+Black and neon-yellow look inspired by the Ladder app: heavy uppercase Archivo Black headlines,
+yellow pill buttons, a full-screen rest timer with the next set's weight, and a workout-complete
+screen with stats. Tokens live in `src/theme.ts`; shared components in `src/components/ui.tsx`.
+
 ## Tech
 
-Expo SDK 58, Expo Router, Zustand with AsyncStorage persistence, TypeScript, Jest (`jest-expo`).
+Expo SDK 58, Expo Router, Zustand with AsyncStorage persistence, expo-linear-gradient,
+`@expo-google-fonts/archivo-black`, TypeScript, Jest (`jest-expo`).

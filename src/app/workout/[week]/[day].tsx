@@ -1,20 +1,23 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExerciseCard } from '@/components/ExerciseCard';
 import { ExercisePicker } from '@/components/ExercisePicker';
-import { RestTimer } from '@/components/RestTimer';
-import { ChoiceSheet, Sheet, afterModalClose, type Choice } from '@/components/Sheet';
-import { Badge, Button, Card, text } from '@/components/ui';
+import { RestTimer, type NextUp } from '@/components/RestTimer';
+import { ChoiceSheet, afterModalClose, type Choice } from '@/components/Sheet';
+import { Badge, Button, Display, SegmentBar, Stat, text } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
 import { weekInfo } from '@/lib/periodization';
-import { exerciseHistory } from '@/lib/program';
+import { exerciseHistory, sessionId } from '@/lib/program';
 import { estimateOneRepMax } from '@/lib/progression';
-import type { EditScope, Exercise, Session, SessionExercise, SetEntry } from '@/lib/types';
+import { suggestionsForExercise } from '@/lib/suggest';
+import type { EditScope, Exercise, Profile, Session, SessionExercise, SetEntry } from '@/lib/types';
 import { useStore } from '@/store/useStore';
-import { colors, space } from '@/theme';
+import { colors, radius, space } from '@/theme';
 
 interface TimerState {
   endsAt: number;
@@ -43,7 +46,32 @@ function summarize(session: Session, sessions: Record<string, Session>) {
     const previous = Math.max(0, ...exerciseHistory(sessions, se.exerciseId, session.id).flatMap((l) => l.sets.map((s) => estimateOneRepMax(s.weight, s.reps))));
     if (previous > 0 && best > previous) records.push(getExercise(se.exerciseId).name);
   }
-  return { sets, volume: Math.round(volume), records };
+  const ms = session.startedAt && session.completedAt ? new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime() : 0;
+  const minutes = Math.floor(ms / 60000);
+  const time = `${minutes}:${Math.floor((ms % 60000) / 1000)
+    .toString()
+    .padStart(2, '0')}`;
+  return { sets, volume: Math.round(volume), records, time };
+}
+
+/** The next unlogged set after the one just logged, with its suggested weight. */
+function nextUp(profile: Profile, sessions: Record<string, Session>, session: Session, seId: string): NextUp | undefined {
+  const start = Math.max(0, session.exercises.findIndex((e) => e.id === seId));
+  const order = [...session.exercises.keys()].map((i) => (start + i) % session.exercises.length);
+  for (const i of order) {
+    const se = session.exercises[i];
+    const setIndex = se.sets.findIndex((s) => !s.done);
+    if (setIndex < 0) continue;
+    const exercise = getExercise(se.exerciseId);
+    const suggestion = suggestionsForExercise(profile, sessions, session, i)[setIndex];
+    const load = suggestion.weight === null ? 'Pick weight ·' : suggestion.weight === 0 ? (exercise.load === 'bodyweight' ? '' : `0 ${profile.units} ×`) : `${suggestion.weight} ${profile.units} ×`;
+    return {
+      label: `Set ${setIndex + 1} of ${se.sets.length}`,
+      detail: `${load} ${suggestion.reps}${exercise.timed ? 's' : ''}`.trim(),
+      exercise,
+    };
+  }
+  return undefined;
 }
 
 export default function WorkoutScreen() {
@@ -55,7 +83,7 @@ export default function WorkoutScreen() {
   const profile = useStore((s) => s.profile);
   const program = useStore((s) => s.program);
   const ensureSession = useStore((s) => s.ensureSession);
-  const sid = program ? `${program.id}:w${week}:d${day}` : '';
+  const sid = program ? sessionId(program.id, week, day) : '';
   const session = useStore((s) => s.sessions[sid]);
   const sessions = useStore((s) => s.sessions);
   const { rateSet, addSet, removeSet, addExercise, swapExercise, removeExercise, finishSession, reopenSession } = useStore.getState();
@@ -84,6 +112,8 @@ export default function WorkoutScreen() {
   const timerSet = timer ? session.exercises.find((e) => e.id === timer.seId)?.sets.find((s) => s.id === timer.setId) : undefined;
   const totalSets = session.exercises.reduce((n, e) => n + e.sets.length, 0);
   const doneSets = session.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
+  const exerciseProgress = session.exercises.reduce((n, e) => n + (e.sets.length ? e.sets.filter((s) => s.done).length / e.sets.length : 0), 0);
+  const estMinutes = Math.round((totalSets * (profile.restSeconds + 45)) / 60 / 5) * 5;
 
   const applyScoped = (scope: EditScope) => {
     if (pending?.kind !== 'scope') return;
@@ -121,37 +151,49 @@ export default function WorkoutScreen() {
   };
 
   const stats = summary ? summarize(session, sessions) : null;
+  const weekDone = program.days.filter((_, d) => sessions[sessionId(program.id, week, d)]?.completedAt).length;
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
-      <Stack.Screen options={{ title: `${session.name} · Week ${week}` }} />
-      <ScrollView contentContainerStyle={[styles.content, timer && { paddingBottom: 240 }]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <Card style={styles.intro}>
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={text.h2}>{session.name}</Text>
-              <Text style={text.small}>{session.focus}</Text>
-            </View>
-            <Badge label={info.phase} tone={info.isDeload ? 'info' : info.isTest ? 'warning' : 'accent'} />
+      <Stack.Screen options={{ title: `WEEK ${week} · ${session.name.toUpperCase()}` }} />
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <View style={styles.hero}>
+          <View style={styles.heroTop}>
+            <Text style={styles.dayLabel}>DAY {day + 1}</Text>
+            <Badge label={info.phase} tone={info.isDeload ? 'info' : info.isTest ? 'warning' : 'success'} />
+            {session.completedAt ? <Badge label="Completed" tone="accent" /> : null}
           </View>
+          <Display size={30}>{session.focus}</Display>
           <Text style={text.muted}>{info.summary}</Text>
-          <Text style={text.small}>
-            {doneSets}/{totalSets} sets · rest {Math.round(profile.restSeconds / 60 * 10) / 10} min between sets
-          </Text>
-          {session.completedAt ? <Badge label="Completed" tone="success" /> : null}
-        </Card>
+        </View>
+
+        <View style={styles.stats}>
+          <Stat value={`${estMinutes} min`} label="Est. time" accent />
+          <View style={styles.divider} />
+          <Stat value={`${doneSets}/${totalSets}`} label="Sets done" accent />
+          <View style={styles.divider} />
+          <Stat value={`${Math.round(profile.restSeconds / 6) / 10}m`} label="Rest" accent />
+        </View>
+        <SegmentBar total={Math.max(1, session.exercises.length)} filled={exerciseProgress} height={6} />
 
         {session.exercises.map((se, i) => (
           <ExerciseCard key={se.id} profile={profile} session={session} index={i} onLogged={onLogged} onMenu={onMenu} />
         ))}
 
         <Button title="+ Add exercise" variant="secondary" onPress={() => setPicker({ mode: 'add' })} />
-        {session.completedAt ? (
-          <Button title="Reopen workout" variant="ghost" onPress={() => reopenSession(session.id)} />
-        ) : (
-          <Button title="Finish workout" onPress={() => (doneSets < totalSets ? setPending({ kind: 'finish' }) : finish())} testID="finish-workout" />
-        )}
+        {session.completedAt ? <Button title="Reopen workout" variant="ghost" onPress={() => reopenSession(session.id)} /> : null}
       </ScrollView>
+
+      {!session.completedAt ? (
+        <View style={styles.footer}>
+          <Button
+            title="Finish workout"
+            variant={doneSets === totalSets ? 'primary' : 'secondary'}
+            onPress={() => (doneSets < totalSets ? setPending({ kind: 'finish' }) : finish())}
+            testID="finish-workout"
+          />
+        </View>
+      ) : null}
 
       {timer ? (
         <RestTimer
@@ -159,6 +201,7 @@ export default function WorkoutScreen() {
           duration={timer.duration}
           setLabel={timer.label}
           effort={timerSet?.effort}
+          next={nextUp(profile, sessions, session, timer.seId)}
           onRate={(effort) => rateSet(session.id, timer.seId, timer.setId, effort)}
           onAdjust={(sec) => setTimer({ ...timer, endsAt: Math.max(Date.now(), timer.endsAt + sec * 1000), duration: Math.max(15, timer.duration + sec) })}
           onClose={() => setTimer(null)}
@@ -211,45 +254,71 @@ export default function WorkoutScreen() {
         }}
       />
 
-      <Sheet visible={summary} onClose={() => setSummary(false)} title="Workout complete 💪">
-        {stats ? (
-          <View style={{ gap: space.md }}>
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={styles.statNum}>{stats.sets}</Text>
-                <Text style={text.small}>sets</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statNum}>{stats.volume.toLocaleString()}</Text>
-                <Text style={text.small}>{profile.units} lifted</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statNum}>{stats.records.length}</Text>
-                <Text style={text.small}>new bests</Text>
-              </View>
-            </View>
-            {stats.records.length ? <Text style={text.muted}>New estimated 1RM: {stats.records.join(', ')}</Text> : null}
-            <Text style={text.muted}>Your next workouts will use today’s numbers to set their weights.</Text>
-            <Button
-              title="Back to program"
-              onPress={() => {
-                setSummary(false);
-                router.back();
-              }}
-            />
-          </View>
-        ) : null}
-      </Sheet>
+      <Modal visible={summary} animationType="fade" onRequestClose={() => setSummary(false)}>
+        <LinearGradient colors={['#000000', '#000000', '#2E3209']} locations={[0, 0.55, 1]} style={{ flex: 1 }}>
+          <SafeAreaView style={styles.summary} edges={['top', 'bottom']}>
+            {stats ? (
+              <>
+                <View style={styles.medalWrap}>
+                  <View style={styles.medalOuter}>
+                    <View style={styles.medalInner}>
+                      <Ionicons name="checkmark" size={56} color={colors.accentText} />
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.streak}>
+                  <Text style={styles.streakTitle}>
+                    WEEK {week} · {weekDone} OF {program.days.length} WORKOUTS
+                  </Text>
+                  <SegmentBar total={program.days.length} filled={weekDone} height={6} />
+                </View>
+                <Text style={styles.summaryEyebrow}>{program.name.toUpperCase()}</Text>
+                <Display size={32}>Workout complete</Display>
+                <Text style={text.muted}>
+                  {session.name} · {session.focus}
+                </Text>
+                <View style={styles.grid}>
+                  <Stat value={stats.time} label="Total time" />
+                  <Stat value={String(stats.sets)} label="Sets" />
+                </View>
+                <View style={styles.grid}>
+                  <Stat value={stats.volume.toLocaleString()} label={`Total volume ${profile.units}`} />
+                  <Stat value={String(stats.records.length)} label="New bests" accent={stats.records.length > 0} />
+                </View>
+                {stats.records.length ? <Text style={text.muted}>New estimated 1RM: {stats.records.join(', ')}</Text> : null}
+                <Text style={[text.small, { marginTop: space.sm }]}>Your next workouts will use today’s numbers to set their weights.</Text>
+                <View style={{ flex: 1 }} />
+                <Button
+                  title="Continue"
+                  onPress={() => {
+                    setSummary(false);
+                    router.back();
+                  }}
+                />
+              </>
+            ) : null}
+          </SafeAreaView>
+        </LinearGradient>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: space.md, gap: space.md, paddingBottom: space.xl * 2 },
-  intro: { gap: space.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  statsRow: { flexDirection: 'row', gap: space.sm },
-  stat: { flex: 1, backgroundColor: colors.cardAlt, borderRadius: 12, padding: space.md, alignItems: 'center' },
-  statNum: { color: colors.accent, fontSize: 24, fontWeight: '800' },
+  content: { padding: space.md, gap: space.md, paddingBottom: space.xl * 3 },
+  hero: { gap: space.sm, paddingHorizontal: space.xs, paddingTop: space.sm },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  dayLabel: { color: colors.accent, fontWeight: '900', fontSize: 13, letterSpacing: 0.6 },
+  stats: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xs, paddingVertical: space.sm },
+  divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.lg, backgroundColor: 'rgba(0,0,0,0.92)' },
+  summary: { flex: 1, padding: space.xl, gap: space.md },
+  medalWrap: { alignItems: 'center', marginTop: space.lg },
+  medalOuter: { width: 148, height: 148, borderRadius: 74, borderWidth: 10, borderColor: '#3A3A40', backgroundColor: '#1A1A1E', alignItems: 'center', justifyContent: 'center' },
+  medalInner: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  streak: { backgroundColor: colors.card, borderRadius: radius.lg, padding: space.md, gap: space.sm, marginTop: space.lg },
+  streakTitle: { color: colors.text, fontWeight: '900', fontSize: 13, letterSpacing: 0.4 },
+  summaryEyebrow: { color: colors.accent, fontWeight: '900', fontSize: 12, letterSpacing: 0.5, marginTop: space.md },
+  grid: { flexDirection: 'row', gap: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: space.md },
 });

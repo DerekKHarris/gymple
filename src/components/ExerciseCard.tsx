@@ -9,21 +9,22 @@ import type { Suggestion, SuggestionKind } from '@/lib/progression';
 import { suggestionsForExercise } from '@/lib/suggest';
 import type { Profile, Session, SessionExercise, SetEntry } from '@/lib/types';
 import { useStore } from '@/store/useStore';
-import { colors, radius, space } from '@/theme';
-import { Badge, Card, text } from './ui';
+import { colors, fonts, radius, space } from '@/theme';
+import { ExerciseIcon } from './ExerciseIcon';
+import { Badge, text } from './ui';
 
-const KIND_STYLE: Record<SuggestionKind, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
-  first: { icon: 'flag-outline', color: colors.info, bg: colors.infoBg },
-  increase: { icon: 'trending-up', color: colors.success, bg: colors.successBg },
-  hold: { icon: 'remove-outline', color: colors.muted, bg: colors.cardAlt },
-  decrease: { icon: 'trending-down', color: colors.warning, bg: colors.warningBg },
-  reset: { icon: 'refresh', color: colors.warning, bg: colors.warningBg },
-  deload: { icon: 'leaf-outline', color: colors.info, bg: colors.infoBg },
-  recalc: { icon: 'calculator-outline', color: colors.info, bg: colors.infoBg },
-  bodyweight: { icon: 'body-outline', color: colors.muted, bg: colors.cardAlt },
+const KIND_STYLE: Record<SuggestionKind, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  first: { icon: 'flag', color: colors.text },
+  increase: { icon: 'trending-up', color: colors.accent },
+  hold: { icon: 'repeat', color: colors.text },
+  decrease: { icon: 'trending-down', color: colors.warning },
+  reset: { icon: 'refresh', color: colors.warning },
+  deload: { icon: 'leaf', color: colors.text },
+  recalc: { icon: 'calculator', color: colors.accent },
+  bodyweight: { icon: 'body', color: colors.text },
 };
 
-const EFFORT_LABEL = { easy: 'Easy', good: 'Good', hard: 'Hard', fail: 'Failed' } as const;
+const EFFORT_LABEL = { easy: 'EASY', good: 'GOOD', hard: 'HARD', fail: 'FAILED' } as const;
 
 type Draft = { weight?: string; reps?: string };
 
@@ -55,10 +56,18 @@ function SetRow({
   const weightValue = set.done ? num(set.weight) : (draft.weight ?? num(suggestion.weight));
   const repsValue = set.done ? num(set.reps) : (draft.reps ?? num(suggestion.reps));
   return (
-    <View style={[styles.setRow, set.done && styles.setRowDone, isNext && styles.setRowNext]}>
-      <Text style={[styles.cell, styles.setNum]}>{index + 1}</Text>
+    <View style={[styles.setRow, isNext && styles.setRowNext]}>
+      <Pressable
+        onPress={onToggle}
+        style={[styles.check, set.done && styles.checkDone, isNext && styles.checkNext]}
+        accessibilityRole="button"
+        accessibilityLabel={set.done ? `Undo set ${index + 1}` : `Log set ${index + 1}`}
+        hitSlop={6}
+      >
+        {set.done ? <Ionicons name="checkmark" size={20} color={colors.accentText} /> : <Text style={[styles.checkNum, isNext && { color: colors.accent }]}>{index + 1}</Text>}
+      </Pressable>
       <View style={styles.targetCell}>
-        <Text style={styles.target}>{formatReps(set, timed)}</Text>
+        <Text style={[styles.target, set.done && { color: colors.muted }]}>{formatReps(set, timed)}</Text>
         {set.done && set.effort ? <Text style={styles.effort}>{EFFORT_LABEL[set.effort]}</Text> : null}
       </View>
       <TextInput
@@ -69,7 +78,7 @@ function SetRow({
         placeholder={bodyweight ? 'BW' : '—'}
         placeholderTextColor={colors.faint}
         selectTextOnFocus
-        style={[styles.input, set.done && styles.inputDone, error && styles.inputError]}
+        style={[styles.input, isNext && styles.inputNext, set.done && styles.inputDone, error && styles.inputError]}
         accessibilityLabel={`Set ${index + 1} weight`}
       />
       <TextInput
@@ -80,18 +89,9 @@ function SetRow({
         placeholder="—"
         placeholderTextColor={colors.faint}
         selectTextOnFocus
-        style={[styles.input, set.done && styles.inputDone]}
+        style={[styles.input, isNext && styles.inputNext, set.done && styles.inputDone]}
         accessibilityLabel={`Set ${index + 1} ${timed ? 'seconds' : 'reps'}`}
       />
-      <Pressable
-        onPress={onToggle}
-        style={[styles.check, set.done && styles.checkDone]}
-        accessibilityRole="button"
-        accessibilityLabel={set.done ? `Undo set ${index + 1}` : `Log set ${index + 1}`}
-        hitSlop={6}
-      >
-        <Ionicons name="checkmark" size={20} color={set.done ? colors.accentText : colors.muted} />
-      </Pressable>
     </View>
   );
 }
@@ -126,6 +126,7 @@ function ExerciseCardInner({
   const last = history[history.length - 1];
   const bodyweight = exercise.load === 'bodyweight';
   const doneCount = se.sets.filter((s) => s.done).length;
+  const allDone = se.sets.length > 0 && doneCount === se.sets.length;
 
   const toggle = (set: SetEntry, i: number) => {
     if (set.done) return undoSet(session.id, se.id, set.id);
@@ -150,51 +151,52 @@ function ExerciseCardInner({
   };
 
   return (
-    <Card style={styles.card}>
+    <View style={[styles.card, allDone && styles.cardDone]}>
       <View style={styles.header}>
+        <ExerciseIcon exercise={exercise} />
         <View style={{ flex: 1, gap: 2 }}>
-          <View style={styles.titleRow}>
-            <Text style={[text.h3, { flexShrink: 1 }]}>{exercise.name}</Text>
-            {se.role === 'main' ? <Badge label="Main lift" tone="accent" /> : se.role === 'core' ? <Badge label="Core" tone="info" /> : null}
-          </View>
-          <Text style={text.small}>
-            {se.sets.length} × {formatReps(se.sets[0] ?? { repMin: 0, repMax: 0 }, exercise.timed)} · {MUSCLE_LABELS[exercise.primary]} · {doneCount}/{se.sets.length} done
+          <Text style={styles.title}>
+            <Text style={{ color: colors.accent }}>{se.sets.length}x </Text>
+            {exercise.name}
           </Text>
-          {last ? (
-            <Text style={text.small} numberOfLines={1}>
-              Last time: {last.sets.map((s) => (s.weight ? `${num(s.weight)}×${s.reps}` : `${s.reps}${exercise.timed ? 's' : ''}`)).join(', ')}
+          <Text style={text.small}>
+            {formatReps(se.sets[0] ?? { repMin: 0, repMax: 0 }, exercise.timed)} {exercise.timed ? 'sec' : 'reps'} · {MUSCLE_LABELS[exercise.primary]}
+          </Text>
+          <View style={styles.tags}>
+            {se.role === 'main' ? <Badge label="Main lift" tone="accent" /> : se.role === 'core' ? <Badge label="Core" /> : null}
+            <Text style={[styles.counter, allDone && { color: colors.accent }]}>
+              {doneCount} of {se.sets.length}
             </Text>
-          ) : null}
+          </View>
         </View>
         {exercise.cue ? (
           <Pressable onPress={() => setShowCue(!showCue)} hitSlop={8} accessibilityLabel="Form tip" style={styles.iconBtn}>
-            <Ionicons name="information-circle-outline" size={22} color={colors.muted} />
+            <Ionicons name="information" size={18} color={colors.text} />
           </Pressable>
         ) : null}
         <Pressable onPress={() => onMenu(se)} hitSlop={8} accessibilityLabel={`${exercise.name} options`} style={styles.iconBtn}>
-          <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+          <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
         </Pressable>
       </View>
       {showCue && exercise.cue ? <Text style={[text.small, styles.cue]}>{exercise.cue}</Text> : null}
+      {last ? (
+        <Text style={styles.last} numberOfLines={1}>
+          LAST TIME <Text style={{ color: colors.text }}>{last.sets.map((s) => (s.weight ? `${num(s.weight)}×${s.reps}` : `${s.reps}${exercise.timed ? 's' : ''}`)).join('  ')}</Text>
+        </Text>
+      ) : null}
 
       {next ? (
-        <View style={[styles.suggestion, { backgroundColor: KIND_STYLE[next.kind].bg }]}>
+        <View style={styles.suggestion}>
           <Ionicons name={KIND_STYLE[next.kind].icon} size={16} color={KIND_STYLE[next.kind].color} />
-          <Text style={[text.small, { color: colors.text, flex: 1 }]}>{next.reason}</Text>
+          <Text style={styles.suggestionText}>{next.reason}</Text>
         </View>
-      ) : (
-        <View style={[styles.suggestion, { backgroundColor: colors.successBg }]}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-          <Text style={[text.small, { color: colors.text, flex: 1 }]}>All sets done.</Text>
-        </View>
-      )}
+      ) : null}
 
       <View style={styles.tableHead}>
-        <Text style={[styles.headText, styles.setNum]}>SET</Text>
+        <Text style={[styles.headText, { width: 36 }]}>LOG</Text>
         <Text style={[styles.headText, styles.targetCell]}>TARGET</Text>
         <Text style={[styles.headText, styles.inputHead]}>{bodyweight ? `+${profile.units.toUpperCase()}` : profile.units.toUpperCase()}</Text>
         <Text style={[styles.headText, styles.inputHead]}>{exercise.timed ? 'SEC' : 'REPS'}</Text>
-        <View style={{ width: 40 }} />
       </View>
       {se.sets.map((set, i) => (
         <SetRow
@@ -212,46 +214,61 @@ function ExerciseCardInner({
         />
       ))}
       {Object.values(errors).some(Boolean) ? <Text style={[text.small, { color: colors.danger }]}>Enter the weight you used.</Text> : null}
-    </Card>
+    </View>
   );
 }
 
 export const ExerciseCard = memo(ExerciseCardInner);
 
 const styles = StyleSheet.create({
-  card: { gap: space.sm, padding: space.md },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xs },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
-  iconBtn: { padding: 4 },
+  card: { gap: space.sm, padding: space.md, backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1.5, borderColor: 'transparent' },
+  cardDone: { borderColor: 'rgba(229,255,0,0.35)' },
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  title: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  tags: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 2 },
+  counter: { color: colors.muted, fontSize: 12, fontWeight: '800' },
+  iconBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.cardAlt, alignItems: 'center', justifyContent: 'center' },
   cue: { color: colors.text, backgroundColor: colors.cardAlt, padding: space.sm, borderRadius: radius.sm },
-  suggestion: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start', padding: space.sm, borderRadius: radius.sm },
+  last: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
+  suggestion: {
+    flexDirection: 'row',
+    gap: space.sm,
+    alignItems: 'flex-start',
+    padding: space.sm,
+    paddingLeft: space.md,
+    borderRadius: radius.sm,
+    backgroundColor: colors.cardAlt,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
+  },
+  suggestionText: { color: colors.text, fontSize: 13, lineHeight: 18, flex: 1 },
   tableHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: 6, marginTop: space.xs },
-  headText: { color: colors.faint, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  headText: { color: colors.faint, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
   inputHead: { flex: 1, textAlign: 'center' },
-  setRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: 6, paddingHorizontal: 6, borderRadius: radius.sm },
-  setRowDone: { backgroundColor: colors.successBg },
-  setRowNext: { backgroundColor: colors.cardAlt },
-  cell: { color: colors.text },
-  setNum: { width: 28, textAlign: 'center', fontWeight: '800', color: colors.muted },
-  targetCell: { width: 64 },
-  target: { color: colors.text, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  effort: { color: colors.muted, fontSize: 10, fontWeight: '700' },
+  setRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: 6, paddingHorizontal: 6, borderRadius: radius.sm, borderLeftWidth: 3, borderLeftColor: 'transparent' },
+  setRowNext: { backgroundColor: 'rgba(229,255,0,0.07)', borderLeftColor: colors.accent },
+  check: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  checkNext: { borderColor: colors.accent },
+  checkDone: { backgroundColor: colors.accent, borderColor: colors.accent },
+  checkNum: { color: colors.muted, fontFamily: fonts.display, fontSize: 14 },
+  targetCell: { width: 60 },
+  target: { color: colors.text, fontWeight: '800', fontSize: 15, fontVariant: ['tabular-nums'] },
+  effort: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
   input: {
     flex: 1,
     minWidth: 0,
-    height: 40,
+    height: 42,
     borderRadius: radius.sm,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     color: colors.text,
     textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
-  inputDone: { backgroundColor: 'transparent', borderColor: 'transparent', color: colors.success },
+  inputNext: { borderColor: colors.accent },
+  inputDone: { backgroundColor: 'transparent', color: colors.accent },
   inputError: { borderColor: colors.danger },
-  check: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  checkDone: { backgroundColor: colors.success, borderColor: colors.success },
 });
