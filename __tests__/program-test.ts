@@ -1,6 +1,7 @@
 import { EXERCISES, canPerform, getExercise } from '@/data/exercises';
 import { EQUIPMENT_PRESETS } from '@/data/goals';
 import { PLANS } from '@/data/plans';
+import { EXERCISE_VIDEOS, videoSearchUrl, videoUrlFor } from '@/data/videos';
 import { TOTAL_WEEKS, schemeFor, weekInfo } from '@/lib/periodization';
 import { buildSession, createProgram, currentWeek, exerciseHistory, recommendPlans, resolvePlanDays, sessionId } from '@/lib/program';
 import type { Equipment, Profile } from '@/lib/types';
@@ -140,5 +141,19 @@ describe('sessions and history', () => {
       all[s.id] = s;
     }
     expect(currentWeek(program, all)).toBe(2);
+  });
+});
+
+describe('exercise videos', () => {
+  it('has a YouTube how-to video for every exercise', () => {
+    for (const exercise of EXERCISES) {
+      const video = EXERCISE_VIDEOS[exercise.id];
+      expect(video?.url).toMatch(/^https:\/\/www\.youtube\.com\/(watch\?v=|shorts\/)[\w-]{11}$/);
+      expect(videoUrlFor(exercise)).toBe(video?.url);
+    }
+  });
+
+  it('falls back to a YouTube search', () => {
+    expect(videoSearchUrl(getExercise('back_squat'))).toBe('https://www.youtube.com/results?search_query=Barbell%20Back%20Squat%20proper%20form');
   });
 });
