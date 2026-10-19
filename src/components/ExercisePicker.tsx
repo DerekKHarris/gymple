@@ -116,8 +116,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
   },
-  filters: { flexGrow: 0, marginTop: space.md },
-  filterRow: { gap: space.sm, paddingHorizontal: space.lg },
+  // flexShrink: 0 stops the list below from squashing this row (it clipped the chips on iOS).
+  filters: { flexGrow: 0, flexShrink: 0, marginTop: space.md },
+  filterRow: { gap: space.sm, paddingHorizontal: space.lg, paddingVertical: 2, alignItems: 'center' },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.md },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
