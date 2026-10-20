@@ -9,7 +9,7 @@ import { exerciseHistory } from '@/lib/program';
 import type { Suggestion, SuggestionKind } from '@/lib/progression';
 import { suggestionsForExercise } from '@/lib/suggest';
 import type { Profile, Session, SessionExercise, SetEntry } from '@/lib/types';
-import { useStore } from '@/store/useStore';
+import { useProgressionHold, useStore } from '@/store/useStore';
 import { colors, fonts, radius, space } from '@/theme';
 import { ExerciseDetail } from './ExerciseDetail';
 import { ExerciseIcon } from './ExerciseIcon';
@@ -121,7 +121,8 @@ function ExerciseCardInner({
   const [showDetail, setShowDetail] = useState(false);
 
   const history = useMemo(() => exerciseHistory(sessions, se.exerciseId, session.id), [sessions, se.exerciseId, session.id]);
-  const suggestions = useMemo(() => suggestionsForExercise(profile, sessions, session, index, history), [profile, sessions, session, index, history]);
+  const hold = useProgressionHold();
+  const suggestions = useMemo(() => suggestionsForExercise(profile, sessions, session, index, history, hold), [profile, sessions, session, index, history, hold]);
 
   const nextIndex = se.sets.findIndex((s) => !s.done);
   const next = nextIndex >= 0 ? suggestions[nextIndex] : undefined;

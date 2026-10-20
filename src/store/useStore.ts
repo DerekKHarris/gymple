@@ -7,12 +7,14 @@ import { getExercise } from '@/data/exercises';
 import { getPlan } from '@/data/plans';
 import { newId } from '@/lib/id';
 import { buildSession, buildSessionExercise, createProgram, schemeForExercise, sessionId, sessionStatus } from '@/lib/program';
-import type { EditScope, Effort, Goal, Profile, Program, ProgramExercise, Role, Session } from '@/lib/types';
+import type { CheckIn, CoachSettings, EditScope, Effort, Goal, Profile, Program, ProgramExercise, Role, Session } from '@/lib/types';
 
 interface State {
   profile?: Profile;
   program?: Program;
   pastPrograms: Program[];
+  checkIns: CheckIn[];
+  coach: CoachSettings;
   sessions: Record<string, Session>;
 
   saveProfile: (profile: Profile) => void;
@@ -34,6 +36,8 @@ interface State {
 
   finishSession: (sessionId: string) => void;
   reopenSession: (sessionId: string) => void;
+  addCheckIn: (checkIn: CheckIn) => void;
+  updateCoach: (patch: Partial<CoachSettings>) => void;
   resetAll: () => void;
 }
 
@@ -75,7 +79,16 @@ const editTemplate = (
   return { program: { ...program, days }, sessions };
 };
 
-const initial = { profile: undefined, program: undefined, pastPrograms: [] as Program[], sessions: {} as Record<string, Session> };
+export const DEFAULT_COACH: CoachSettings = { checkInDay: 0, reminder: false, healthConnected: false, saveToHealth: true };
+
+const initial = {
+  profile: undefined,
+  program: undefined,
+  pastPrograms: [] as Program[],
+  sessions: {} as Record<string, Session>,
+  checkIns: [] as CheckIn[],
+  coach: DEFAULT_COACH,
+};
 
 export const useStore = create<State>()(
   persist(
@@ -208,13 +221,29 @@ export const useStore = create<State>()(
 
       reopenSession: (sid) => set((state) => withSession(state, sid, (s) => ({ ...s, completedAt: undefined }))),
 
+      addCheckIn: (checkIn) =>
+        set((state) => ({
+          checkIns: [...state.checkIns, checkIn],
+          coach: {
+            ...state.coach,
+            holdUntil: checkIn.report.holdProgression ? new Date(new Date(checkIn.date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+          },
+        })),
+
+      updateCoach: (patch) => set((state) => ({ coach: { ...state.coach, ...patch } })),
+
       resetAll: () => set({ ...initial }),
     }),
     {
       name: 'gymple-store',
       version: 1,
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ profile, program, pastPrograms, sessions }) => ({ profile, program, pastPrograms, sessions }),
+      partialize: ({ profile, program, pastPrograms, sessions, checkIns, coach }) => ({ profile, program, pastPrograms, sessions, checkIns, coach }),
+      // Older saves predate check-ins; fill in defaults for anything missing.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<State>;
+        return { ...current, ...saved, checkIns: saved.checkIns ?? [], coach: { ...DEFAULT_COACH, ...saved.coach } };
+      },
     },
   ),
 );
@@ -226,4 +255,9 @@ export function useHydrated(): boolean {
     () => useStore.persist.hasHydrated(),
     () => false,
   );
+}
+
+/** True while the coach is holding weight increases after a low-recovery check-in. */
+export function useProgressionHold(): boolean {
+  return useStore((s) => !!s.coach.holdUntil && new Date(s.coach.holdUntil).getTime() > Date.now());
 }

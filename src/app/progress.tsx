@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BodyProgress } from '@/components/BodyProgress';
 import { ExerciseIcon } from '@/components/ExerciseIcon';
 import { Card, SectionTitle, text } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
@@ -99,6 +100,8 @@ export default function ProgressScreen() {
             <Text style={text.small}>{u} lifted</Text>
           </View>
         </View>
+
+        <BodyProgress units={u} />
 
         <SectionTitle>Exercises</SectionTitle>
         {stats.length === 0 ? (

@@ -13,6 +13,7 @@ export function suggestionsForExercise(
   session: Session,
   exerciseIndex: number,
   history: ExerciseLog[] = exerciseHistory(sessions, session.exercises[exerciseIndex].exerciseId, session.id),
+  hold = false,
 ): Suggestion[] {
   const se = session.exercises[exerciseIndex];
   const exercise = getExercise(se.exerciseId);
@@ -29,6 +30,7 @@ export function suggestionsForExercise(
       target: targetFor(profile.goal, session.week, se, set),
       history,
       currentSets,
+      hold,
     });
   });
 }

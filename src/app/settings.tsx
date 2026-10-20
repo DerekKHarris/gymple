@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CoachSettings } from '@/components/CoachSettings';
 import { ChoiceSheet } from '@/components/Sheet';
 import { Button, Card, Chip, SectionTitle, text } from '@/components/ui';
 import { EQUIPMENT_LABELS } from '@/data/exercises';
@@ -79,6 +80,8 @@ export default function SettingsScreen() {
           <Text style={text.h3}>{program?.name ?? 'No plan selected'}</Text>
           <Button title="Change plan" variant="secondary" onPress={() => router.push('/plans')} />
         </Card>
+
+        <CoachSettings />
 
         <SectionTitle>Credits</SectionTitle>
         <Pressable onPress={() => Linking.openURL('https://repdb.co').catch(() => {})} accessibilityRole="link">

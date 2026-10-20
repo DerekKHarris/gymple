@@ -11,12 +11,13 @@ import { RestTimer, type NextUp } from '@/components/RestTimer';
 import { ChoiceSheet, afterModalClose, type Choice } from '@/components/Sheet';
 import { Badge, Button, Display, SegmentBar, Stat, text } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
+import { saveStrengthWorkout } from '@/lib/health';
 import { weekInfo } from '@/lib/periodization';
 import { exerciseHistory, sessionId } from '@/lib/program';
 import { estimateOneRepMax } from '@/lib/progression';
 import { suggestionsForExercise } from '@/lib/suggest';
 import type { EditScope, Exercise, Profile, Session, SessionExercise, SetEntry } from '@/lib/types';
-import { useStore } from '@/store/useStore';
+import { useProgressionHold, useStore } from '@/store/useStore';
 import { colors, radius, space } from '@/theme';
 
 interface TimerState {
@@ -55,7 +56,7 @@ function summarize(session: Session, sessions: Record<string, Session>) {
 }
 
 /** The next unlogged set after the one just logged, with its suggested weight. */
-function nextUp(profile: Profile, sessions: Record<string, Session>, session: Session, seId: string): NextUp | undefined {
+function nextUp(profile: Profile, sessions: Record<string, Session>, session: Session, seId: string, hold: boolean): NextUp | undefined {
   const start = Math.max(0, session.exercises.findIndex((e) => e.id === seId));
   const order = [...session.exercises.keys()].map((i) => (start + i) % session.exercises.length);
   for (const i of order) {
@@ -63,7 +64,7 @@ function nextUp(profile: Profile, sessions: Record<string, Session>, session: Se
     const setIndex = se.sets.findIndex((s) => !s.done);
     if (setIndex < 0) continue;
     const exercise = getExercise(se.exerciseId);
-    const suggestion = suggestionsForExercise(profile, sessions, session, i)[setIndex];
+    const suggestion = suggestionsForExercise(profile, sessions, session, i, undefined, hold)[setIndex];
     const load = suggestion.weight === null ? 'Pick weight ·' : suggestion.weight === 0 ? (exercise.load === 'bodyweight' ? '' : `0 ${profile.units} ×`) : `${suggestion.weight} ${profile.units} ×`;
     return {
       label: `Set ${setIndex + 1} of ${se.sets.length}`,
@@ -86,6 +87,7 @@ export default function WorkoutScreen() {
   const sid = program ? sessionId(program.id, week, day) : '';
   const session = useStore((s) => s.sessions[sid]);
   const sessions = useStore((s) => s.sessions);
+  const hold = useProgressionHold();
   const { rateSet, addSet, removeSet, addExercise, swapExercise, removeExercise, finishSession, reopenSession } = useStore.getState();
 
   const [timer, setTimer] = useState<TimerState | null>(null);
@@ -146,6 +148,11 @@ export default function WorkoutScreen() {
 
   const finish = () => {
     finishSession(session.id);
+    const { coach } = useStore.getState();
+    const done = useStore.getState().sessions[session.id];
+    if (coach.healthConnected && coach.saveToHealth && done?.startedAt && done.completedAt) {
+      void saveStrengthWorkout(new Date(done.startedAt), new Date(done.completedAt));
+    }
     setTimer(null);
     setSummary(true);
   };
@@ -201,7 +208,7 @@ export default function WorkoutScreen() {
           duration={timer.duration}
           setLabel={timer.label}
           effort={timerSet?.effort}
-          next={nextUp(profile, sessions, session, timer.seId)}
+          next={nextUp(profile, sessions, session, timer.seId, hold)}
           onRate={(effort) => rateSet(session.id, timer.seId, timer.setId, effort)}
           onAdjust={(sec) => setTimer({ ...timer, endsAt: Math.max(Date.now(), timer.endsAt + sec * 1000), duration: Math.max(15, timer.duration + sec) })}
           onClose={() => setTimer(null)}

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CheckInCard } from '@/components/CheckInCard';
 import { ExerciseIcon } from '@/components/ExerciseIcon';
 import { Badge, Button, Display, SectionTitle, SegmentBar, text } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
@@ -120,6 +121,8 @@ export default function ProgramScreen() {
           </Text>
         </View>
         {week !== activeWeek ? <Button title={`Go to current week (${activeWeek})`} variant="secondary" size="sm" onPress={() => setWeek(activeWeek)} /> : null}
+
+        <CheckInCard />
 
         {next ? (
           <Pressable onPress={() => open(next.index)} accessibilityLabel={`${next.name} workout`}>

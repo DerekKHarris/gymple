@@ -26,7 +26,21 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Gymple reads your weight, body fat, lean mass, steps, sleep and resting heart rate to build your weekly check-in report.",
+          "NSHealthUpdateUsageDescription": "Gymple saves your check-in weight and finished workouts to Apple Health.",
+          "background": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false
+        }
+      ]
     ],
     "scheme": "gymple",
     "experiments": {

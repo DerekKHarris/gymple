@@ -50,6 +50,8 @@ export interface SuggestInput {
   history: ExerciseLog[];
   /** Sets already completed for this exercise in the current session, in order. */
   currentSets: LoggedSet[];
+  /** The weekly check-in found recovery low: suggest no weight increases. */
+  hold?: boolean;
 }
 
 export type SuggestionKind = 'first' | 'increase' | 'hold' | 'decrease' | 'deload' | 'reset' | 'recalc' | 'bodyweight';
@@ -171,6 +173,27 @@ function fmtRange(t: { repMin: number; repMax: number }): string {
 // ---------- Main entry point ----------
 
 export function suggestNextSet(input: SuggestInput): Suggestion {
+  const suggestion = suggest(input);
+  if (!input.hold || suggestion.kind !== 'increase' || suggestion.weight === null) return suggestion;
+  const weight = holdWeight(input);
+  if (weight === null) return suggestion;
+  return {
+    ...suggestion,
+    weight,
+    kind: 'hold',
+    reason: `Coach: holding at ${fmt(weight, input.units)} this week while you recover. Focus on clean reps.`,
+  };
+}
+
+/** The weight to repeat when progression is on hold: the last set's, else last session's working weight. */
+function holdWeight({ currentSets, history }: SuggestInput): number | null {
+  const last = currentSets[currentSets.length - 1];
+  if (last && last.weight > 0) return last.weight;
+  const log = history.filter((l) => !l.isDeload && l.sets.length).pop();
+  return log ? workingWeight(log) : null;
+}
+
+function suggest(input: SuggestInput): Suggestion {
   const { exercise } = input;
   const loaded = input.currentSets.length
     ? input.currentSets.some((s) => s.weight > 0)

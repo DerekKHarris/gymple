@@ -20,12 +20,32 @@ suggestions. All data is stored on the device.
    from everything you've logged, using rules that match your goal. See
    [docs/RESEARCH.md](docs/RESEARCH.md) for the research and the exact rules.
 7. **Progress:** estimated 1RM trend, history and totals for each exercise.
+8. **Weekly check-in and coach's report:** log weight, body fat, lean mass and waist, and rate
+   energy, sleep, soreness, stress, nutrition and motivation. The coach compares your weight and
+   body-composition trend with your goal, reviews training consistency, new bests and recovery,
+   gives up to three actions for next week, and can hold weight increases for a week when recovery
+   is low. Optional weekly reminder notification.
+9. **Apple Health (iPhone):** check-ins pull 7-day averages of weight, body fat and lean mass
+   (e.g. from a smart scale) plus steps, sleep and resting heart rate, and can save check-in
+   weight and finished workouts back to Health.
 
 ## Running it
 
 ```sh
 npm install
 npx expo start        # then press i (iOS), a (Android) or w (web), or scan with Expo Go
+```
+
+### Apple Health needs a development build
+
+HealthKit is native code, so it doesn't run in Expo Go (everything else does; check-ins fall back to
+typed-in numbers). To use it on your iPhone, build the app once with EAS (needs an Apple Developer
+account, which HealthKit requires):
+
+```sh
+npx eas-cli@latest login
+npx eas-cli@latest build --profile development --platform ios   # install it on your phone from the link
+npx expo start --dev-client                                    # then open the installed Gymple app
 ```
 
 ## Checks
@@ -72,4 +92,5 @@ instructions and tips in `src/data/exerciseMedia.ts` come from the
 ## Tech
 
 Expo SDK 58, Expo Router, Zustand with AsyncStorage persistence, expo-linear-gradient,
-`@expo-google-fonts/archivo-black`, TypeScript, Jest (`jest-expo`).
+`@expo-google-fonts/archivo-black`, `@kingstinct/react-native-healthkit` (Apple Health),
+expo-notifications (weekly reminder), TypeScript, Jest (`jest-expo`).

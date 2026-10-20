@@ -84,6 +84,36 @@ Every suggestion uses all sets the user has ever logged for that exercise, acros
 Effort ratings ("Easy / Good / Hard / Failed") are optional and asked during the rest timer.
 Mostly-easy sessions earn a double increment next time.
 
+## Weekly check-in coach (`src/lib/coach.ts`)
+
+| Goal | Healthy weekly body-weight change | Coach's response when outside it |
+| --- | --- | --- |
+| Lose fat | −0.5 to −1% of body weight | Faster: eat ~100–200 kcal more to protect muscle. Flat: trim ~200 kcal or add ~2,000 steps. |
+| Build muscle | +0.25 to +0.5% | Faster than ~0.75%: ease back ~150 kcal (mostly fat). Flat: add ~200 kcal. |
+| Get stronger | −0.25 to +0.5% | Losing more than 0.5%: eat at least maintenance. |
+| General fitness | within ±0.5% | Flags bigger swings. |
+
+- Garthe et al. (2011) found athletes losing ~0.7% of body weight a week kept or gained lean mass,
+  while ~1.4% a week did not; Helms et al. (2014) recommend 0.5–1% a week for lifters cutting.
+- Iraki et al. (2019) suggest gaining roughly 0.25–0.5% of body weight a week in a muscle-building phase.
+- **Body composition:** with a smart scale's body fat % or lean mass, each week's change is split into
+  fat mass and lean mass. Losing lean mass on a cut, or gaining mostly fat on a bulk, triggers advice
+  (protein 1.6–2.2 g/kg, slower rate). Bioimpedance scales are noisy, so Apple Health's 7-day
+  averages are preferred over single readings.
+- **Recovery:** two or more of short sleep (< 6.5 h from Apple Health or a poor rating), low energy,
+  heavy soreness or high stress hold weight increases for 7 days (the progression engine repeats
+  weights instead of adding them), unless the next week is already a deload. Sleep target 7–9 h.
+- **Consistency:** workouts done vs planned in the last 7 days; new estimated 1RM bests and
+  week-over-week volume are reported as wins.
+- Advice is capped at three actions a week so it stays doable.
+
+Check-in sources:
+- Garthe et al. (2011), weight-loss rate and body composition in athletes:
+  https://www.sponet.de/sponet/Record/4017680
+- Helms, Aragon & Fitschen (2014), evidence-based recommendations for natural bodybuilding contest
+  preparation, and Helms on protein: https://mennohenselmans.com/eric-helms-protein/
+- Iraki et al. (2019), nutrition recommendations for bodybuilders in the off-season (Sports, 7(7):154).
+
 ## Sources
 
 - ACSM Position Stand, *Progression Models in Resistance Training for Healthy Adults* (2009):
